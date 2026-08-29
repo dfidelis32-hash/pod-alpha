@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#b00020">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="POD Alpha">
+  <link rel="manifest" href="manifest.webmanifest">
+  <link rel="apple-touch-icon" href="icon.svg">
+  <title>POD Alpha</title>
+  <style>
+    :root{--red:#b00020;--bg:#f4f4f5;--card:#fff;--text:#171717;--muted:#71717a;--border:#e4e4e7}
+    *{box-sizing:border-box} body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+    header{background:#111;color:#fff;padding:22px 18px 18px;border-bottom:4px solid var(--red)}
+    header b{font-size:24px} header span{display:block;color:#bbb;margin-top:3px;font-size:13px}
+    main{max-width:760px;margin:auto;padding:18px}.card{background:var(--card);border:1px solid var(--border);border-radius:18px;padding:18px;margin-bottom:14px;box-shadow:0 4px 18px #0000000b}
+    label{font-size:13px;font-weight:700;display:block;margin:0 0 7px} input{width:100%;padding:14px;border:1px solid #d4d4d8;border-radius:12px;font-size:16px}
+    .row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.btn{width:100%;padding:14px;border:0;border-radius:12px;font-weight:800;font-size:15px;cursor:pointer}
+    .primary{background:var(--red);color:#fff}.secondary{background:#f1f1f3;color:#18181b}.drop{border:2px dashed #c7c7cc;text-align:center;padding:25px;border-radius:14px;margin-top:12px}
+    .drop strong{display:block;margin-bottom:5px}.muted{color:var(--muted);font-size:13px}.preview{margin-top:12px;text-align:center}.preview img{max-width:100%;max-height:320px;border-radius:12px}.pdf{padding:22px;background:#fafafa;border-radius:12px}
+    .success{display:none;background:#ecfdf3;border:1px solid #a7f3d0;padding:14px;border-radius:12px;margin-top:12px}.success b{color:#047857}
+    .list{display:grid;gap:8px}.item{display:flex;justify-content:space-between;gap:12px;padding:13px;border:1px solid var(--border);border-radius:12px;background:#fff}.ok{color:#047857;font-weight:800}.pending{color:#b00020;font-weight:800}
+    @media(max-width:520px){.row{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+<header><b>📦 POD Alpha</b><span>Comprovante de Entrega • versão de teste</span></header>
+<main>
+  <section class="card">
+    <h2>Enviar comprovante</h2>
+    <label for="nf">Número da NF</label>
+    <input id="nf" inputmode="numeric" placeholder="Ex.: 100001">
+    <div id="info" class="muted" style="margin-top:9px"></div>
+  </section>
+
+  <section class="card">
+    <label>Comprovante</label>
+    <div class="row">
+      <button class="btn primary" id="camera">📷 Tirar foto</button>
+      <button class="btn secondary" id="arquivo">📎 Anexar arquivo</button>
+    </div>
+    <input id="fileCamera" type="file" accept="image/*" capture="environment" hidden>
+    <input id="fileAny" type="file" accept="image/jpeg,image/png,image/webp,application/pdf" hidden>
+    <div class="drop" id="drop"><strong>PDF, JPG, JPEG, PNG ou WEBP</strong><span class="muted">No computador, clique em “Anexar arquivo”.</span></div>
+    <div id="preview" class="preview"></div>
+    <div id="success" class="success">✅ <b>Comprovante enviado com sucesso!</b><div id="successText" class="muted"></div></div>
+    <button class="btn primary" id="send" style="margin-top:12px">🟢 Enviar comprovante</button>
+  </section>
+
+  <section class="card">
+    <h3>Últimos testes neste aparelho</h3>
+    <div id="history" class="list"></div>
+  </section>
+</main>
+<script>
+const samples={100001:["Cliente Teste 1","Transportadora Alpha"],100002:["Cliente Teste 2","Transportadora Beta"],100003:["Cliente Teste 3","Transportadora Alpha"]};
+let selected=null;
+const $=id=>document.getElementById(id);
+$("nf").addEventListener("input",()=>{const n=$("nf").value.trim(); $("info").textContent=samples[n]?`Cliente: ${samples[n][0]} • Transportadora: ${samples[n][1]}`:"";});
+$("camera").onclick=()=>$("fileCamera").click();
+$("arquivo").onclick=()=>$("fileAny").click();
+$("fileCamera").onchange=e=>pick(e.target.files[0]);
+$("fileAny").onchange=e=>pick(e.target.files[0]);
+function pick(f){
+  if(!f)return;
+  const allowed=["image/jpeg","image/png","image/webp","application/pdf"];
+  if(!allowed.includes(f.type)){alert("Formato não aceito. Use PDF, JPG, JPEG, PNG ou WEBP.");return}
+  selected=f; $("success").style.display="none";
+  $("preview").innerHTML="";
+  if(f.type==="application/pdf") $("preview").innerHTML=`<div class="pdf">📄 <b>${f.name}</b><br><span class="muted">${Math.round(f.size/1024)} KB</span></div>`;
+  else {const img=document.createElement("img");img.src=URL.createObjectURL(f);$("preview").appendChild(img);}
+}
+$("send").onclick=()=>{
+  const nf=$("nf").value.trim();
+  if(!nf){alert("Informe a NF.");return}
+  if(!selected){alert("Tire uma foto ou anexe um arquivo.");return}
+  const rec={nf,file:selected.name,at:new Date().toLocaleString("pt-BR")};
+  const h=JSON.parse(localStorage.getItem("podHistory")||"[]");h.unshift(rec);localStorage.setItem("podHistory",JSON.stringify(h.slice(0,20)));
+  $("success").style.display="block";$("successText").textContent=`NF ${nf} • ${selected.name} • ${rec.at}`;
+  render();
+};
+function render(){const h=JSON.parse(localStorage.getItem("podHistory")||"[]");$("history").innerHTML=h.length?h.map(x=>`<div class="item"><div><b>NF ${x.nf}</b><div class="muted">${x.file}<br>${x.at}</div></div><div class="ok">RECEBIDO</div></div>`).join(""):`<div class="muted">Nenhum envio de teste ainda.</div>`}
+render();
+if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js");
+</script>
+</body>
+</html>
